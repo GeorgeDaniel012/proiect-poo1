@@ -1,1 +1,1 @@
-# proiect-poo1
+# Proiect 1 - Curs Programare Orientata pe Obiecte

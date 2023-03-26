@@ -4,6 +4,9 @@ Proiectul este o "recreatie" a unui site/baze de date pe care sunt publicate spe
 
 ## Functionalitate
 Programul este echipat cu un "meniu" (in terminal). Utilizatorul poate rula mai multe comenzi de creatie/modificare a unor obiecte din clasele programului: User, Run_Time, Run, Category, Game.
+
+Utilizarea normala a programului implica adaugarea unor obiecte noi in ordinea de mai sus (User nou, apoi Run nou care e conectat de un user s.a.m.d.).
+
 Lista de comenzi utilizabile in cadrul programului:
 - `quit` - sfarseste executia programului
 - `addUser` - creeaza un User nou
@@ -17,11 +20,10 @@ Lista de comenzi utilizabile in cadrul programului:
 - `catList` - afiseaza lista globala cu toate categoriile
 - `addRunToCat` - adauga un run la o categorie
 - `removeRunFromCat` - elimina un run dintr-o categorie
+- `showTotalTimeCat` - afiseaza timpul adunat al tuturor run-urilor dintr-o categorie
 - `addGame` - creeaza un joc nou
 - `gameList` - afiseaza lista cu toate jocurile
 - `addCatToGame` - adauga o categorie la un joc
-
-![Adaugarea unui user nou](https://imgur.com/Bi0HNEc)
 
 ## Clase
 - **User** - descrie un user al site-ului

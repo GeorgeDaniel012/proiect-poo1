@@ -10,21 +10,21 @@ Utilizarea normala a programului implica adaugarea unor obiecte noi in ordinea d
 Lista de comenzi utilizabile in cadrul programului:
 - `quit` - sfarseste executia programului
 - `addUser` - creeaza un User nou
-- `userList` - afiseaza lista cu toti userii
+- `userList` - afiseaza lista cu toti userii (sortata dupa id global)
 - `editUser` - permite modificarea numelui unui user
 - `addRun` - creeaza un Run nou
-- `runList` - afiseaza lista globala cu toate run-urile
+- `runList` - afiseaza lista globala cu toate run-urile (sortata dupa id global)
 - `runShow` - afiseaza informatii despre un run
 - `editRun` - permite modificarea descrierii unui run
 - `addCategory` - creeaza o categorie noua
-- `catList` - afiseaza lista globala cu toate categoriile
+- `catList` - afiseaza lista globala cu toate categoriile (sortata dupa id global)
 - `addRunToCat` - adauga un run la o categorie
 - `removeRunFromCat` - elimina un run dintr-o categorie
 - `showTotalTimeCat` - afiseaza timpul adunat al tuturor run-urilor dintr-o categorie
 - `catRunList` - afiseaza toate run-urile dintr-o categorie
 - `leaderboard` - afiseaza toate run-urile dintr-o categorie, sortate (ca un leaderboard obisnuit)
 - `addGame` - creeaza un joc nou
-- `gameList` - afiseaza lista cu toate jocurile
+- `gameList` - afiseaza lista cu toate jocurile (sortata dupa id global)
 - `addCatToGame` - adauga o categorie la un joc
 
 ## Clase

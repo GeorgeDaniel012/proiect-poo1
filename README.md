@@ -21,6 +21,8 @@ Lista de comenzi utilizabile in cadrul programului:
 - `addRunToCat` - adauga un run la o categorie
 - `removeRunFromCat` - elimina un run dintr-o categorie
 - `showTotalTimeCat` - afiseaza timpul adunat al tuturor run-urilor dintr-o categorie
+- `catRunList` - afiseaza toate run-urile dintr-o categorie
+- `leaderboard` - afiseaza toate run-urile dintr-o categorie, sortate (ca un leaderboard obisnuit)
 - `addGame` - creeaza un joc nou
 - `gameList` - afiseaza lista cu toate jocurile
 - `addCatToGame` - adauga o categorie la un joc

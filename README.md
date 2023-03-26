@@ -44,7 +44,7 @@ Lista de comenzi utilizabile in cadrul programului:
     - un **run_nr** - numar de run-uri din categorie
     - un **nume**
     - o **descriere**
-  - intr-un category se pot adauga si elimina run-uri
+  - intr-un category se pot adauga si elimina run-uri, si se poate afisa timpul total al run-urilor din category
 - **Game** - un joc cuprins din mai multe categorii
   - un Game are:
     - un **cat_list** (alt array de pointeri, de data asta catre categorii) - o lista de categorii

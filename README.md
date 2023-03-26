@@ -1,5 +1,5 @@
 # Proiect 1 - Curs Programare Orientata pe Obiecte
-## Speedrunning Website/Database-like Program
+## Speedrunning Website/Database-like Program - Scurta descriere
 Proiectul este o "recreatie" a unui site/baze de date pe care sunt publicate speedrun-uri (cum ar fi speedrun.com).
 
 ## Functionalitate

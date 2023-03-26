@@ -308,6 +308,58 @@ public:
             cout<<"Runs:"<<'\n';
             for(int i=0;i<run_nr;i++){
                 run_list[i]->afis();
+                cout<<"Local id: "<<i<<'\n';
+            }
+        }
+    }
+
+    void afisSorted(){
+        //normal run_list este sortat dupa id-ul local al run-urilor
+        //ei bine, functia asta afiseaza run-urile sortate dupa timp (ca un leaderboard normal)
+        Run** sorted_list = new Run*[run_nr];
+        copy(run_list, run_list+run_nr, sorted_list);
+
+        int* x;
+        int* y;
+
+        for(int i=0;i<run_nr-1;i++){
+            for(int j=0;j<run_nr-i-1;j++){
+                x = run_list[j]->getRunTime()->getTime();
+                y = run_list[j+1]->getRunTime()->getTime();
+                if(x[0]==y[0]){
+                    if(x[1]==y[0]){
+                        if(x[2]==y[2]){
+                            if(x[3]>y[3]){
+                                Run* t = sorted_list[j];
+                                sorted_list[j] = sorted_list[j+1];
+                                sorted_list[j+1] = t;
+                            }
+                        }else if(x[2]>y[2]){
+                            Run* t = sorted_list[j];
+                            sorted_list[j] = sorted_list[j+1];
+                            sorted_list[j+1] = t;
+                        }
+                    }else if(x[1]>y[1]){
+                        Run* t = sorted_list[j];
+                        sorted_list[j] = sorted_list[j+1];
+                        sorted_list[j+1] = t;
+                    }
+                }else if(x[0]>y[0]){
+                    Run* t = sorted_list[j];
+                    sorted_list[j] = sorted_list[j+1];
+                    sorted_list[j+1] = t;
+                }
+            }
+        }
+
+        cout<<"Category name: "<<name<<'\n';
+        cout<<"Category description: "<<description<<'\n';
+        cout<<"There are "<<run_nr<<" runs in this category."<<'\n';
+        if(run_nr != 0){
+            cout<<"Runs:"<<'\n';
+            for(int i=0;i<run_nr;i++){
+                sorted_list[i]->afis();
+                cout<<"Place: "<<i+1<<'\n';
             }
         }
     }
@@ -389,6 +441,7 @@ public:
             for(int i=0;i<cat_nr;i++){
                 cout<<"Category name: "<<cat_list[i]->getName()<<"\nCategory description: ";
                 cout<<cat_list[i]->getDesc()<<"\nNumber of runs in category: "<<cat_list[i]->getRunNr()<<" runs\n";
+                cout<<"Local id "<<i<<'\n';
             }
         }
     }
@@ -489,10 +542,10 @@ int main(){
             }
         }else if(strcmp(command, "editUser")==0){
             int userId = user_nr;
-            while(userId>=user_nr){
+            while(userId>=user_nr||userId<0){
                 cout<<"What user do you want to change? (global id)\n";
                 cin>>userId;
-                if(userId>=user_nr){
+                if(userId>=user_nr||userId<0){
                     cout<<"That user id does not exist.\n";
                 }
             }
@@ -507,10 +560,10 @@ int main(){
             cout<<"Please type out the time of the run: hours, minutes, seconds, milliseconds.\n";
             cin>>h>>m>>s>>ms;
             RunTime* rt = new RunTime(h, m, s, ms);
-            while(userId>=user_nr){
+            while(userId>=user_nr||userId<0){
                 cout<<"Which user submitted the run? (global id)\n";
                 cin>>userId;
-                if(userId>=user_nr){
+                if(userId>=user_nr||userId<0){
                     cout<<"That user id does not exist.\n";
                 }
             }
@@ -526,20 +579,20 @@ int main(){
             }
         }else if(strcmp(command, "runShow")==0){ //afiseaza informatii despre un run anume
             int runId = run_nr;
-            while(runId>=run_nr){
+            while(runId>=run_nr||runId<0){
                 cout<<"Which run do you want to see? (global id)\n";
                 cin>>runId;
-                if(runId>=run_nr){
+                if(runId>=run_nr||runId<0){
                     cout<<"That run id does not exist.\n";
                 }
             }
             run_list[runId]->afis();
         }else if(strcmp(command, "editRun")==0){
             int runId = run_nr;
-            while(runId>=run_nr){
+            while(runId>=run_nr||runId<0){
                 cout<<"What run do you want to change? (global id)\n";
                 cin>>runId;
-                if(runId>=run_nr){
+                if(runId>=run_nr||runId<0){
                     cout<<"That run id does not exist.\n";
                 }
             }
@@ -565,49 +618,69 @@ int main(){
             }
         }else if(strcmp(command, "addRunToCat")==0){ //adauga un run la o categorie
             int runId=run_nr, catId=cat_nr;
-            while(catId>=cat_nr){
+            while(catId>=cat_nr||catId<0){
                 cout<<"What category do you want to add the run to? (global id)\n";
                 cin>>catId;
-                if(catId>=cat_nr){
+                if(catId>=cat_nr||catId<0){
                     cout<<"That category id does not exist.\n";
                 }
             }
-            while(runId>=run_nr){
+            while(runId>=run_nr||runId<0){
                 cout<<"What run do you want to add to the category? (global id)\n";
                 cin>>runId;
-                if(runId>=run_nr){
+                if(runId>=run_nr||runId<0){
                     cout<<"That run id does not exist.\n";
                 }
             }
             cat_list[catId]->addRun(run_list[runId]);
         }else if(strcmp(command, "removeRunFromCat")==0){ //elimina un run dintr-o categorie
             int catId = cat_nr;
-            while(catId>=cat_nr){
+            while(catId>=cat_nr||catId<0){
                 cout<<"What category do you want to remove the run from? (global id)\n";
                 cin>>catId;
-                if(catId>=cat_nr){
+                if(catId>=cat_nr||catId<0){
                     cout<<"That category id does not exist.\n";
                 }
             }
             int runId = cat_list[catId]->getRunNr();
-            while(runId>=run_nr){
+            while(runId>=run_nr||runId<0){
                 cout<<"What run do you want to remove from the category? (LOCAL/category-based id)\n";
                 cin>>runId;
-                if(runId>=run_nr){
+                if(runId>=run_nr||runId<0){
                     cout<<"That run id does not exist.\n";
                 }
             }
             cat_list[catId]->removeRun(runId);
         }else if(strcmp(command, "showTotalTimeCat")==0){
             int catId = cat_nr;
-            while(catId>=cat_nr){
+            while(catId>=cat_nr||catId<0){
                 cout<<"What category do you want to get the total run time from? (global id)\n";
                 cin>>catId;
-                if(catId>=cat_nr){
+                if(catId>=cat_nr||catId<0){
                     cout<<"That category id does not exist.\n";
                 }
             }
             cout<<cat_list[catId]->getTotalTime();
+        }else if(strcmp(command, "leaderboard")==0){
+            int catId = cat_nr;
+            while(catId>=cat_nr||catId<0){
+                cout<<"Which category's leaderboards do you want to see? (global id)\n";
+                cin>>catId;
+                if(catId>=cat_nr||catId<0){
+                    cout<<"That category id does not exist.\n";
+                }
+            }
+            cat_list[catId]->afisSorted();
+        }else if(strcmp(command, "catRunList")==0){
+            int catId = cat_nr;
+            while(catId>=cat_nr||catId<0){
+                cout<<"Which category's leaderboards do you want to see? (global id)\n";
+                cin>>catId;
+                if(catId>=cat_nr||catId<0){
+                    cout<<"That category id does not exist.\n";
+                }
+            }
+            cat_list[catId]->afis();
         }else if(strcmp(command, "addGame")==0){ //creeaza un joc nou
             char name[20], description[20];
             cout<<"What is the name of this game?\n";
@@ -624,17 +697,17 @@ int main(){
             }
         }else if(strcmp(command, "addCatToGame")==0){ //adauga o categorie la un joc
             int gameId=game_nr, catId=cat_nr;
-            while(gameId>=game_nr){
+            while(gameId>=game_nr||gameId<0){
                 cout<<"What game do you want to add the category to? (global id)\n";
                 cin>>gameId;
-                if(gameId>=game_nr){
+                if(gameId>=game_nr||gameId<0){
                     cout<<"That game id does not exist.\n";
                 }
             }
-            while(catId>=cat_nr){
+            while(catId>=cat_nr||catId<0){
                 cout<<"What category do you want to add to the game? (global id)\n";
                 cin>>catId;
-                if(catId>=cat_nr){
+                if(catId>=cat_nr||catId<0){
                     cout<<"That category id does not exist.\n";
                 }
             }

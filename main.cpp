@@ -1,59 +1,45 @@
 #include <iostream>
 #include <cstring>
+#include <vector>
+#include <algorithm>
 
 using namespace std;
 
-int maxId = 0;
+class InvalidCommand: public exception{};
+//tip de exceptie care este thrown cand user-ul insereaza o comanda gresita
+//sau incearca sa execute o comanda pe un obiect gresit
 
-class User{ //fiecare user are un username si un id care creste cu 1 pentru fiecare user creat
-    char username[20];
-    int id;
+class TimeManagement{ //interfata pentru clasele ajutatoare pentru timp (Date si RunTime)
 public:
-    User(char* name){
-        strcpy(username, name);
-        id = maxId++;
-        //cout<<"Created user "<<username<<" with id "<<id<<'\n';
+    virtual void printInfo() = 0;
+    virtual ~TimeManagement(){};
+};
+
+class Date: protected TimeManagement{
+    int year, month, day;
+public:
+    Date(int y, int m, int d){
+        year=y;
+        month=m;
+        day=d;
     }
 
-    User(){
-        strcpy(username, "\0");
-        id = maxId;
-        //cout<<"Created (empty) user "<<username<<" with id "<<id<<'\n';
+    Date(){
+        year=0;
+        month=0;
+        day=0;
     }
 
-    User(User& u){
-        strcpy(username, u.username);
-        id = u.id;
-        //cout<<"Copied user\n";
-    }
+    virtual ~Date(){};
 
-    ~User(){
-        //cout<<"Deleted user "<<username<<" with id "<< id<<"!\n";
-    }
-
-    void operator = (User& u){
-        strcpy(username, u.username);
-        id = u.id;
-    }
-
-    void afis(){
-        cout<<"Username: "<<username<<"\nId: "<<id<<'\n';
-    }
-
-    char* getUsername(){
-        return username;
-    }
-
-    void setUsername(char* name){
-        strcpy(username, name);
-    }
-
-    int getId(){
-        return id;
+    virtual void printInfo(){
+        cout<<"Year: "<<year<<'\n';
+        cout<<"Month: "<<month<<'\n';
+        cout<<"Day: "<<day<<'\n';
     }
 };
 
-class RunTime{ //timp masurat in ore, minute, secunde, milisecunde
+class RunTime: public TimeManagement{ //timp masurat in ore, minute, secunde, milisecunde
     int hours, minutes, seconds, milliseconds;
 public:
     RunTime(int h, int m, int s, int ms){
@@ -91,11 +77,11 @@ public:
         milliseconds = t.milliseconds;
     }
 
-    ~RunTime(){
+    virtual ~RunTime(){
         //cout<<"Deleted Run Time!\n";
     }
 
-    void printTime(){ //printeaza pe ecran timpul
+    virtual void printInfo(){ //printeaza pe ecran timpul
         cout<<"Time: "<<hours<<"h, "<<minutes<<"m, "<<seconds<<"s, "<<milliseconds<<"ms\n";
     }
 
@@ -165,40 +151,95 @@ ostream& operator << (ostream& os, const RunTime& rt){
     cout<<"Time: "<<rt.hours<<"h, "<<rt.minutes<<"m, "<<rt.seconds<<"s, "<<rt.milliseconds<<"ms\n";
 }
 
-class Run{ //fiecare run are un user care a dat submit (submitter), un timp si o descriere
-    User* submitter;
-    RunTime* tm;
-    char description[100];
+class User{ //fiecare user are un username si un id care creste cu 1 pentru fiecare user creat
+    char username[20];
+    int id;
+    static vector<User*> user_list;
 public:
-    Run(User& s, RunTime& t, char* desc){
-        submitter = &s;
-        tm = &t;
-        strcpy(description, desc);
-        //cout<<"Created run!\n";
+    User(char* name){
+        strcpy(username, name);
+        user_list.push_back(this);
+        //id = maxId++;
+        //cout<<"Created user "<<username<<" with id "<<id<<'\n';
     }
 
-    Run(){
-        submitter = new User;
-        tm = new RunTime;
-        //cout<<"Created run (empty)!\n";
+    User(){
+        strcpy(username, "\0");
+        //user_list.push_back(this);
+        //id = maxId;
+        //cout<<"Created (empty) user "<<username<<" with id "<<id<<'\n';
     }
 
-    ~Run(){
-        //cout<<"Deleted run!\n";
+    User(User& u){
+        strcpy(username, u.username);
+        id = u.id;
+        //user_list.push_back(this);
+        //cout<<"Copied user\n";
+    }
+
+    ~User(){
+        user_list.erase(find(user_list.begin(), user_list.end(), this));
+        //cout<<"Deleted user "<<username<<" with id "<< id<<"!\n";
+    }
+
+    void operator = (User& u){
+        strcpy(username, u.username);
+        id = u.id;
     }
 
     void afis(){
-        submitter->afis();
-        tm->printTime();
-        cout<<"Run Description: "<<description<<'\n';
+        cout<<"Username: "<<username<<"\nId: "<<id<<'\n';
     }
+
+    char* getUsername(){
+        return username;
+    }
+
+    void setUsername(char* name){
+        strcpy(username, name);
+    }
+
+    int getId(){
+        return id;
+    }
+
+    static User* getUser(int i){
+        return user_list[i];
+    }
+
+    static void printUserList(){
+        cout<<"There are "<<user_list.size()<<" users on the database.\n";
+        for(int i=0;i<user_list.size();i++){
+            cout<<user_list[i]->username<<'\n';
+            cout<<"User Id: "<<i<<'\n';
+        }
+    }
+};
+
+vector<User*> User::user_list;
+
+class Record{
+protected:
+    User* submitter;
+    char description[100];
+public:
+    Record(User& sub, char* desc){
+        submitter = &sub;
+        strcpy(description, desc);
+    }
+
+    Record(){
+        submitter = new User();
+    }
+
+    virtual ~Record(){};
+protected:
+    virtual string getRecordType() = 0;
+public:
+    virtual void afis() = 0;
 
     User* getSubmitter(){
         return submitter;
-    }
-
-    RunTime* getRunTime(){
-        return tm;
     }
 
     char* getDescription(){
@@ -208,75 +249,190 @@ public:
     void setDescription(char* desc){
         strcpy(description, desc);
     }
+};
 
+class Run: virtual public Record{ //fiecare run are un user care a dat submit (submitter), un timp si o descriere
+protected:
+    RunTime* tm;
+public:
+    Run(User& sub, int h, int m, int s, int ms, char* desc){
+        submitter = &sub;
+        tm = new RunTime(h, m, s, ms);
+        strcpy(description, desc);
+        //cout<<"Created run!\n";
+    }
+
+    Run(){
+        submitter = new User();
+        tm = new RunTime();
+        //cout<<"Created run (empty)!\n";
+    }
+
+    virtual ~Run(){
+        delete tm;
+        //cout<<"Deleted run!\n";
+}
+protected:
+    virtual string getRecordType(){
+        return "Speedrun";
+    }
+public:
+    virtual void afis(){
+        submitter->afis();
+        cout<<"Record of type "<<getRecordType()<<'\n';
+        tm->printInfo();
+        cout<<"Run Description: "<<description<<'\n';
+    }
+
+    RunTime* getRunTime(){
+        return tm;
+    }
+
+    /*
     void operator = (Run& r){
         submitter = r.submitter;
         tm = r.tm;
         strcpy(description, r.description);
     }
+    */
 };
 
+class CounterRec: virtual public Record{
+protected:
+    int counter;
+    char counter_type[20];
+public:
+    CounterRec(User& sub, int cnt, char* desc, char* cnt_type){
+        submitter = &sub;
+        counter = cnt;
+        strcpy(description, desc);
+        strcpy(counter_type, cnt_type);
+        //cout<<"Created run!\n";
+    }
+
+    CounterRec(){
+        submitter = new User();
+        counter = 0;
+    }
+
+    virtual ~CounterRec(){};
+
+protected:
+    virtual string getRecordType(){
+        return "Counter Record";
+    }
+public:
+    virtual void afis(){
+        submitter->afis();
+        cout<<"Record of type "<<getRecordType()<<'\n';
+        cout<<counter_type<<": "<<counter<<'\n';
+        cout<<"Run Description: "<<description<<'\n';
+    }
+};
+
+class ChallengeRun: public Run, public CounterRec{
+    char challenge_name[20];
+public:
+    ChallengeRun(User& sub, int h, int m, int s, int ms, int cnt, char* desc, char* cnt_type, char* chl_name){
+        submitter = &sub;
+        tm = new RunTime(h, m, s, ms);
+        counter = cnt;
+        strcpy(description, desc);
+        strcpy(counter_type, cnt_type);
+        strcpy(challenge_name, chl_name);
+        //cout<<"Created run!\n";
+    }
+
+    /*
+    ChallengeRun(){
+        submitter = new User();
+        tm = new RunTime();
+        counter = 0;
+    }
+    */
+
+    virtual ~ChallengeRun(){
+        delete tm;
+        //cout<<"Deleted run!\n";
+    }
+protected:
+    virtual string getRecordType(){
+        return "Challenge";
+    }
+public:
+    virtual void afis(){
+        submitter->afis();
+        tm->printInfo();
+        cout<<"Record of type "<<getRecordType()<<'\n';
+        cout<<"Challenge name: "<<challenge_name<<'\n';
+        cout<<counter_type<<": "<<counter<<'\n';
+        cout<<"Run Description: "<<description<<'\n';
+    }
+};
+
+
+//class
+
 class Category{ //fiecare categorie are o lista de run-uri (mai exact un array de pointeri la run-uri) si descrierea ei proprie
-    Run** run_list;
-    int run_nr = 0;
+    char category_type;
+protected:
+    vector<Record*> record_list;
     char name[20];
-    //int run_nr = 0;
     char description[100];
     //User** mod_list;
     //int mod_nr = 1;
 public:
-    Category(char* nm, char* desc){ //cand creem o categorie, ii putem adauga run-uri in run_list
-        run_nr = 0;
+    Category(char* nm, char* desc, char cat_type){ //cand creem o categorie, ii putem adauga run-uri in run_list
         strcpy(name, nm);
         strcpy(description, desc);
-        //cout<<"Created category!\n";
+        category_type = cat_type;
+        //cout<<"Created Category!\n";
     }
 
     Category(){
         strcpy(name, "\0");
         strcpy(description, "\0");
-        //cout<<"Created category (empty)!\n";
+        category_type = '\0';
+        //cout<<"Created Category (empty)!\n";
     }
 
     ~Category(){
-        if(run_nr!=0){
-            delete[] run_list;
+        for(int i=record_list.size()-1;i>=0;i--){
+            delete record_list[i];
         }
-        //cout<<"Deleted category!\n";
-    }
-    void addRun(Run*& r){ //functia adauga un run la categorie si incrementeaza nr de run-uri ale categoriei
-        if(run_nr!=0){
-            Run** t = new Run*[run_nr];
-            copy(run_list, run_list+run_nr, t);
-            delete run_list;
-            run_list = new Run*[++run_nr];
-            copy(t, t+run_nr-1, run_list);
-            run_list[run_nr-1] = r;
-        }
-        else{
-            run_list = new Run*[1];
-            run_nr++;
-            run_list[0] = r;
-        }
+        //cout<<"Deleted Category!\n";
     }
 
-    void removeRun(int run_index){
-        //sterge un run dintr-o categorie, run_index/id-ul este local
-        //(bazat pe lista categoriei de run-uri, nu pe lista globala)
-        if(run_index<run_nr){
-            Run** t = new Run*[run_nr];
-            copy(run_list, run_list+run_nr, t);
-            delete run_list;
-            run_list = new Run*[--run_nr];
-            if(run_index!=0){
-                copy(t, t+run_index, run_list);
-            }
-            if(run_index!=run_nr){
-                copy(t+run_index+1, t+run_nr+1, run_list+run_index);
-            }
+    virtual void createRun(User& sub, int h, int m, int s, int ms, char* desc){ //functia creeaza un run si il adauga la categorie
+        if(category_type!='s'){
+            InvalidCommand i;
+            throw i;
         }
-        else{
-            cout<<"Run Index out of bounds."; //daca run_index este inafara run_list-ului
+        Record* r = new Run(sub, h, m, s, ms, desc);
+        record_list.push_back(r);
+    }
+
+    virtual void createCounterRec(User& sub, int cnt, char* desc, char* cnt_type){
+        if(category_type!='c'){
+            InvalidCommand i;
+            throw i;
+        }
+        Record* r = new CounterRec(sub, cnt, desc, cnt_type);
+        record_list.push_back(r);
+    }
+
+    void removeRecord(int record_index){
+        //sterge un run dintr-o categorie, run_index/id-ul este local
+        try{
+            if(record_index>=record_list.size()){
+                out_of_range o("out of range");
+                throw o;
+            }
+            delete record_list[record_index];
+            record_list.erase(record_list.begin()+record_index);
+        }
+        catch(out_of_range){
+            cout<<"Record Index out of bounds."; //daca run_index este inafara run_list-ului
         }
     }
 
@@ -296,23 +452,33 @@ public:
         strcpy(description, desc);
     }
 
-    int getRunNr(){
-        return run_nr;
+    int getRecordNr(){
+        return record_list.size();
     }
 
-    void afis(){
+    vector<Record*> getRecordList(){
+        return record_list;
+    }
+
+    virtual void afis(){
+        int record_nr = record_list.size();
         cout<<"Category name: "<<name<<'\n';
         cout<<"Category description: "<<description<<'\n';
-        cout<<"There are "<<run_nr<<" runs in this category."<<'\n';
-        if(run_nr != 0){
-            cout<<"Runs:"<<'\n';
-            for(int i=0;i<run_nr;i++){
-                run_list[i]->afis();
+        cout<<"There are "<<record_nr<<" records in this category."<<'\n';
+        if(record_nr != 0){
+            cout<<"Records:"<<'\n';
+            for(int i=0;i<record_nr;i++){
+                record_list[i]->afis();
                 cout<<"Local id: "<<i<<'\n';
             }
         }
     }
 
+    char getCategoryType(){
+        return category_type;
+    }
+
+    /*
     void afisSorted(){
         //normal run_list este sortat dupa id-ul local al run-urilor
         //ei bine, functia asta afiseaza run-urile sortate dupa timp (ca un leaderboard normal)
@@ -354,7 +520,7 @@ public:
 
         cout<<"Category name: "<<name<<'\n';
         cout<<"Category description: "<<description<<'\n';
-        cout<<"There are "<<run_nr<<" runs in this category."<<'\n';
+        cout<<"There are "<<run_nr<<" runs in this Category."<<'\n';
         if(run_nr != 0){
             cout<<"Runs:"<<'\n';
             for(int i=0;i<run_nr;i++){
@@ -363,12 +529,21 @@ public:
             }
         }
     }
+    */
 
     RunTime getTotalTime(){
+        int run_nr = record_list.size();
         RunTime t;
         if(run_nr != 0){
             for(int i=0;i<run_nr;i++){
-                t += *(run_list[i]->getRunTime());
+                Run* r = dynamic_cast<Run*>(record_list[i]);
+
+                if(!r){
+                    bad_cast b;
+                    throw b;
+                }
+
+                t += *(r->getRunTime());
             }
         }
         return t;
@@ -376,53 +551,151 @@ public:
 
 };
 
+class Event: public Category{
+    static vector<Event*> event_list;
+    Date* start_date;
+    Date* end_date;
+public:
+    Event(char* nm, char* desc, int start_year, int start_month, int start_day, int end_year, int end_month, int end_day):Category(nm, desc, 'e'){
+        //strcpy(name, nm);
+        //strcpy(description, desc);
+        start_date = new Date(start_year, start_month, start_day);
+        end_date = new Date(end_year, end_month, end_day);
+        event_list.push_back(this);
+    }
+
+    Event():Category(){
+        strcpy(name, "\0");
+        strcpy(description, "\0");
+        start_date = new Date();
+        end_date = new Date();
+        event_list.push_back(this);
+    }
+
+    ~Event(){
+        delete start_date;
+        delete end_date;
+        event_list.erase(find(event_list.begin(), event_list.end(), this));
+    };
+
+    void createChallenge(User& sub, int h, int m, int s, int ms, int cnt, char* desc, char* cnt_type, char* chl_name){
+        Record* c = new ChallengeRun(sub, h, m, s, ms, cnt, desc, cnt_type, chl_name);
+        record_list.push_back(c);
+    }
+
+    virtual void createRun(User& sub, int h, int m, int s, int ms, char* desc){
+        Record* r = new Run(sub, h, m, s, ms, desc);
+        record_list.push_back(r);
+    }
+
+    virtual void createCounterRec(User& sub, int cnt, char* desc, char* cnt_type){
+        Record* r = new CounterRec(sub, cnt, desc, cnt_type);
+        record_list.push_back(r);
+    }
+
+    virtual void afis(){
+        int record_nr = record_list.size();
+        cout<<"Event name: "<<name<<'\n';
+        cout<<"Event description: "<<description<<'\n';
+        cout<<"There are "<<record_nr<<" records in this event."<<'\n';
+        if(record_nr != 0){
+            cout<<"Records:"<<'\n';
+            for(int i=0;i<record_nr;i++){
+                record_list[i]->afis();
+                cout<<"Local id: "<<i<<'\n';
+            }
+        }
+    }
+
+    static void printEventList(){
+        cout<<"There are "<<event_list.size()<<" events on the database.\n";
+        for(int i=0;i<event_list.size();i++){
+            cout<<event_list[i]->name<<'\n';
+            cout<<"Event Id: "<<i<<'\n';
+        }
+    }
+
+    static int getEventListSize(){
+        return event_list.size();
+    }
+
+    static Event* getEvent(int i){
+        return event_list[i];
+    }
+};
+
+vector<Event*> Event::event_list;
+
 class Game{ //fiecare joc are mai multe categorii (array de pointeri la categorii ale jocului), plus un nume si o descriere
-    Category** cat_list;
-    int cat_nr = 0;
+    static vector<Game*> game_list;
+    vector<Category*> cat_list;
+    vector<ChallengeRun*> chl_list;
     char name[20];
     char description[100];
 public:
     Game(char* nm, char* desc){
-        cat_list = new Category*[0];
         strcpy(name, nm);
         strcpy(description, desc);
-        cat_nr = 0;
+        game_list.push_back(this);
         //cout<<"Created game!\n";
     }
 
     Game(){
-        cat_list = new Category*[0];
         strcpy(name, "\0");
         strcpy(description, "\0");
-        cat_nr = 0;
+        game_list.push_back(this);
         //cout<<"Created (empty) game!\n";
     }
 
     ~Game(){
-        if(cat_nr!=0){
-            delete[] cat_list;
+        for(int i=cat_list.size()-1;i>=0;i--){
+            delete cat_list[i];
         }
+        for(int j=chl_list.size()-1;j>=0;j--){
+            delete chl_list[j];
+        }
+        game_list.erase(find(game_list.begin(), game_list.end(), this));
         //cout<<"Deleted game!\n";
     }
 
-    void addCategory(Category*& cat){ //functia adauga o categorie la joc si incrementeaza nr de categorii ale jocului
-        if(cat_nr!=0){
-            Category** t = new Category*[cat_nr];
-            copy(cat_list, cat_list+cat_nr, t);
-            delete cat_list;
-            cat_list = new Category*[++cat_nr];
-            copy(t, t+cat_nr-1, cat_list);
-            cat_list[cat_nr-1] = cat;
+    void createCategory(char* nm, char* desc, char cat_type){ //functia adauga o categorie la joc si incrementeaza nr de categorii ale jocului
+        Category* c = new Category(nm, desc, cat_type);
+        cat_list.push_back(c);
+    }
+
+    void removeCat(int cat_index){
+        //sterge o categorie dintr-un joc, cat_index/id-ul este local
+        try{
+            if(cat_index>=cat_list.size()){
+                out_of_range o("out of range");
+                throw o;
+            }
+            delete cat_list[cat_index];
+            cat_list.erase(cat_list.begin()+cat_index);
         }
-        else{
-            cat_list = new Category*[1];
-            cat_nr++;
-            cat_list[0] = cat;
+        catch(out_of_range){
+            cout<<"Category Index out of bounds."; //daca cat_index este inafara cat_list-ului
         }
     }
 
-    int getCategoryNr(){
-        return cat_nr;
+    void createChallenge(User& sub, int h, int m, int s, int ms, int cnt, char* desc, char* cnt_type, char* chl_name){
+        ChallengeRun* c = new ChallengeRun(sub, h, m, s, ms, cnt, desc, cnt_type, chl_name);
+        chl_list.push_back(c);
+    }
+
+    void removeChl(int chl_index){
+        //sterge o categorie dintr-un joc, run_index/id-ul este local
+        try{
+            if(chl_index>=chl_list.size()){
+                out_of_range o("out of range");
+                throw o;
+            }
+            delete chl_list[chl_index];
+            chl_list.erase(chl_list.begin()+chl_index);
+        }
+        catch(out_of_range){
+            cout<<"Challenge Index out of bounds."; //daca chl_index este inafara cat_list-ului
+        }
     }
 
     void setName(char* nm){
@@ -433,305 +706,479 @@ public:
         strcpy(description, desc);
     }
 
+    int getCategoryNr(){
+        return cat_list.size();
+    }
+
+    vector<Category*> getCatList(){
+        return cat_list;
+    }
+
     void afis(){
+        int cat_nr = cat_list.size();
         cout<<"Game name: "<<name<<'\n';
         cout<<"Game description: "<<description<<'\n';
         cout<<"List of categories:\n";
         if(cat_nr!=0){
             for(int i=0;i<cat_nr;i++){
                 cout<<"Category name: "<<cat_list[i]->getName()<<"\nCategory description: ";
-                cout<<cat_list[i]->getDesc()<<"\nNumber of runs in category: "<<cat_list[i]->getRunNr()<<" runs\n";
+                cout<<cat_list[i]->getDesc()<<"\nNumber of records in category: "<<cat_list[i]->getRecordNr()<<" records\n";
                 cout<<"Local id "<<i<<'\n';
             }
         }
+        cout<<"There are "<<chl_list.size()<<" challenges submitted for this game.\n";
+    }
+
+    static void printGameList(){
+        cout<<"There are "<<game_list.size()<<" games on the database.\n";
+        for(int i=0;i<game_list.size();i++){
+            cout<<game_list[i]->name<<'\n';
+            cout<<"Game Id: "<<i<<'\n';
+        }
+    }
+
+    static int getGameListSize(){
+        return game_list.size();
+    }
+
+    static Game* getGame(int i){
+        return game_list[i];
+    }
+
+    int getCatListSize(){
+        return cat_list.size();
+    }
+
+    int getChlListSize(){
+        return chl_list.size();
+    }
+
+    void catAfis(int cat_index){
+        cat_list[cat_index]->afis();
+    }
+
+    void chlAfis(int chl_index){
+        chl_list[chl_index]->afis();
     }
 };
 
-int user_nr = 0; //global
-int run_nr = 0; //global
-int cat_nr = 0; //global
-int game_nr = 0; //global
+vector<Game*> Game::game_list;
 
-User** user_list;
-Run** run_list;
-Category** cat_list;
-Game** game_list;
-
-void addUser(User*& u){
-    if(user_nr!=0){
-        User** t = new User*[user_nr];
-        copy(user_list, user_list+user_nr, t);
-        delete user_list;
-        user_list = new User*[++user_nr];
-        copy(t, t+user_nr-1, user_list);
-        user_list[user_nr-1] = u;
-    }
+void editCategory(Category* c){
+    string cmd;
+    cin>>cmd;
+    cin.get();
+    if(cmd == "createRun"){
+        cout<<"Which user submitted the run (user id)?\n";
+        User::printUserList();
+        int i;
+        cin>>i;
+        cin.get();
+        User* u = User::getUser(i);
+        cout<<"What time did the run have (hours, minutes, seconds, milliseconds)?\n";
+        int h, m, s, ms;
+        cin>>h>>m>>s>>ms;
+        cin.get();
+        cout<<"Please provide a description for this run.\n";
+        char desc[100];
+        cin.get(desc, 100);
+        cin.get();
+        c->createRun(*u, h, m, s, ms, desc);
+    }else if(cmd == "createCounterRecord"){
+        cout<<"Which user submitted the record (user id)?\n";
+        User::printUserList();
+        int i;
+        cin>>i;
+        cin.get();
+        User* u = User::getUser(i);
+        cout<<"What counter does this challenge have?\n";
+        int cn;
+        cin>>cn;
+        cin.get();
+        cout<<"What counter type is this?\n";
+        char ct[20];
+        cin.get(ct, 20);
+        cin.get();
+        cout<<"Please provide a description for this challenge.\n";
+        char desc[100];
+        cin.get(desc, 100);
+        cin.get();
+        c->createCounterRec(*u, cn, desc, ct);
+    }else if(cmd == "removeRecord"){
+        cout<<"Which record do you want to remove (record id)?\n";
+        c->afis();
+        int i;
+        cin>>i;
+        cin.get();
+        c->removeRecord(i);
+    }else if(cmd == "view"){
+        c->afis();
+    }else if(cmd == "cancel"){}
     else{
-        user_list = new User*[1];
-        user_nr++;
-        user_list[0] = u;
+        InvalidCommand i;
+        throw i;
     }
 }
 
-void addRun(Run*& r){
-    if(run_nr!=0){
-        Run** t = new Run*[run_nr];
-        copy(run_list, run_list+run_nr, t);
-        delete run_list;
-        run_list = new Run*[++run_nr];
-        copy(t, t+run_nr-1, run_list);
-        run_list[run_nr-1] = r;
-    }
+void editEvent(){
+    cout<<"What event do you want to edit (game id)?\n";
+    Event::printEventList();
+    int eid;
+    cin>>eid;
+    Event* e = Event::getEvent(eid);
+    cout<<"What do you want to do to the game with id "<<eid<<"?\n";
+    cout<<"If you want to go back, type cancel.\n";
+    string cmd;
+    cin>>cmd;
+    cin.get();
+    if(cmd == "createRun"){
+        cout<<"Which user submitted the run (user id)?\n";
+        User::printUserList();
+        int i;
+        cin>>i;
+        cin.get();
+        User* u = User::getUser(i);
+        cout<<"What time did the run have (hours, minutes, seconds, milliseconds)?\n";
+        int h, m, s, ms;
+        cin>>h>>m>>s>>ms;
+        cin.get();
+        cout<<"Please provide a description for this run.\n";
+        char desc[100];
+        cin.get(desc, 100);
+        cin.get();
+        e->createRun(*u, h, m, s, ms, desc);
+    }else if(cmd == "createCounterRecord"){
+        cout<<"Which user submitted the record (user id)?\n";
+        User::printUserList();
+        int i;
+        cin>>i;
+        cin.get();
+        User* u = User::getUser(i);
+        cout<<"What counter does this challenge have?\n";
+        int cn;
+        cin>>cn;
+        cin.get();
+        cout<<"What counter type is this?\n";
+        char ct[20];
+        cin.get(ct, 20);
+        cin.get();
+        cout<<"Please provide a description for this challenge.\n";
+        char desc[100];
+        cin.get(desc, 100);
+        cin.get();
+        e->createCounterRec(*u, cn, desc, ct);
+    }else if(cmd == "removeRecord"){
+        cout<<"Which record do you want to remove (record id)?\n";
+        e->afis();
+        int i;
+        cin>>i;
+        cin.get();
+        e->removeRecord(i);
+    }else if(cmd == "view"){
+        e->afis();
+    }else if(cmd == "createChallenge"){
+        cout<<"Which user submitted the challenge (user id)?\n";
+        User::printUserList();
+        int i;
+        cin>>i;
+        cin.get();
+        User* u = User::getUser(i);
+        cout<<"What time did the challenge run have (hours, minutes, seconds, milliseconds)?\n";
+        int h, m, s, ms;
+        cin>>h>>m>>s>>ms;
+        cin.get();
+        cout<<"What counter does this challenge have?\n";
+        int c;
+        cin>>c;
+        cin.get();
+        cout<<"What counter type is this?\n";
+        char ct[20];
+        cin.get(ct, 20);
+        cin.get();
+        cout<<"What is the name of this challenge?\n";
+        char nm[20];
+        cin.get(nm, 20);
+        cin.get();
+        cout<<"Please provide a description for this challenge.\n";
+        char desc[100];
+        cin.get(desc, 100);
+        cin.get();
+        e->createChallenge(*u, h, m, s, ms, c, desc, ct, nm);
+    }else if(cmd == "cancel"){}
     else{
-        run_list = new Run*[1];
-        run_nr++;
-        run_list[0] = r;
+        InvalidCommand i;
+        throw i;
     }
 }
 
-void addCategory(Category*& cat){
-    if(cat_nr!=0){
-        Category** t = new Category*[cat_nr];
-        copy(cat_list, cat_list+cat_nr, t);
-        delete cat_list;
-        cat_list = new Category*[++cat_nr];
-        copy(t, t+cat_nr-1, cat_list);
-        cat_list[cat_nr-1] = cat;
-    }
+void editGame(){
+    cout<<"What game do you want to edit (game id)?\n";
+    Game::printGameList();
+    int gid;
+    cin>>gid;
+    Game* g = Game::getGame(gid);
+    cout<<"What do you want to do to the game with id "<<gid<<"?\n";
+    cout<<"If you want to go back, type cancel.\n";
+    string cmd;
+    cin>>cmd;
+    cin.get();
+    if(cmd == "createCategory"){
+        cout<<"What is the category's name?\n";
+        char name[20];
+        cin.get(name, 20);
+        cin.get();
+        cout<<"What is the category's description?\n";
+        char desc[100];
+        cin.get(desc, 100);
+        cin.get();
+        cout<<"What kind of category is this?\n";
+        cout<<"s - speedrun, c - counter record\n";
+        char type[1];
+        cin>>type;
+        cin.get();
+        bool isInvalid = false;
+        if(strcmp(type, "s") != 0 && strcmp(type, "c") != 0){
+            isInvalid = true;
+        }
+        while(isInvalid){
+            cout<<"Category type is invalid. Please insert either s or c.\n";
+            cin>>type;
+            cin.get();
+            if(strcmp(type, "s") == 0 || strcmp(type, "c") == 0){
+                isInvalid = false;
+            }
+        }
+        g->createCategory(name, desc, type[0]);
+    }else if(cmd == "removeCategory"){
+        cout<<"Which category do you want to delete (category id)?\n";
+        g->afis();
+        cout<<'\n';
+        int i;
+        cin>>i;
+        cin.get();
+        g->removeCat(i);
+    }else if(cmd == "view"){
+        g->afis();
+    }else if(cmd == "viewCategory"){
+        cout<<"Which category do you want to view (category id)?\n";
+        int i;
+        cin>>i;
+        cin.get();
+        g->catAfis(i);
+    }else if(cmd == "createChallenge"){
+        cout<<"Which user submitted the challenge (user id)?\n";
+        User::printUserList();
+        int i;
+        cin>>i;
+        cin.get();
+        User* u = User::getUser(i);
+        cout<<"What time did the challenge run have (hours, minutes, seconds, milliseconds)?\n";
+        int h, m, s, ms;
+        cin>>h>>m>>s>>ms;
+        cin.get();
+        cout<<"What counter does this challenge have?\n";
+        int c;
+        cin>>c;
+        cin.get();
+        cout<<"What counter type is this?\n";
+        char ct[20];
+        cin.get(ct, 20);
+        cin.get();
+        cout<<"What is the name of this challenge?\n";
+        char nm[20];
+        cin.get(nm, 20);
+        cin.get();
+        cout<<"Please provide a description for this challenge.\n";
+        char desc[100];
+        cin.get(desc, 100);
+        cin.get();
+        g->createChallenge(*u, h, m, s, ms, c, desc, ct, nm);
+    }else if(cmd == "editCategory"){
+        if(g->getCatListSize()==0){
+            //cout<<"There are no categories associated to this game.\n";
+            range_error r("no range");
+            throw r;
+        }
+        cout<<"What category do you want to edit (category id)?\n";
+        g->afis();
+        int i;
+        cin>>i;
+        cin.get();
+        Category* c = (g->getCatList())[i];
+        cout<<"What do you want to do to the category with id "<<i<<"?\n";
+        cout<<"If you want to go back, type cancel.\n";
+        editCategory(c);
+    }else if(cmd == "removeCategory"){
+        if(g->getCatListSize()==0){
+            //cout<<"There are no categories associated to this game.\n";
+            range_error r("no range");
+            throw r;
+        }
+        cout<<"What category do you want to delete?\n";
+        int i;
+        cin>>i;
+        cin.get();
+        g->removeCat(i);
+    }else if(cmd == "cancel"){}
     else{
-        cat_list = new Category*[1];
-        cat_nr++;
-        cat_list[0] = cat;
-    }
-}
-
-void addGame(Game*& g){
-    if(game_nr!=0){
-        Game** t = new Game*[game_nr];
-        copy(game_list, game_list+game_nr, t);
-        delete game_list;
-        game_list = new Game*[++game_nr];
-        copy(t, t+game_nr-1, game_list);
-        game_list[game_nr-1] = g;
-    }
-    else{
-        game_list = new Game*[1];
-        game_nr++;
-        game_list[0] = g;
+        InvalidCommand i;
+        throw i;
     }
 }
 
 int main(){
-    bool isRunning = true; //daca suntem in "meniu"
-    char command[20];
-    while(isRunning){ //un loop pentru "meniu"
+    /*
+    User* u = new User("abc");
+    //Run* r = new Run(*u, 1, 2, 3, 4, "aaa");
+    //r->afis();
+    Game g("name", "desc");
+    Game g1("a", "gsg");
+    Game g2("hhwe", "hsdhs");
+    Game::printGameList();
+    g.createCategory("Category", "desc", 's');
+    g.createCategory("cat2", "desc2", 'c');
+    //c.afis();
+    (g.getCatList())[0]->createRun(*u, 1, 2, 3, 4, "aaa");
+    (g.getCatList())[0]->createRun(*u, 2, 3, 4, 5, "aba");
+    (g.getCatList())[1]->createCounterRec(*u, 7, "bbb", "deaths");
+    //g.afis();
+    g.catAfis(0);
+    (g.getCatList())[0]->removeRecord(0);
+    g.catAfis(0);
+    //g.catAfis(1);
+    //g.createChallenge(*u, 1, 2, 3, 4, 17, "aaa", "bcd", "challenge");
+    //g.afis();
+    //g.chlAfis(0);
+    //c.afis();
+    */
+    User* u1 = new User("zylenox");
+    User* u2 = new User("doogile");
+    User* u3 = new User("reignex");
+    User* u4 = new User("Goombs");
+    User* u5 = new User("Rickfernello");
+    User* u6 = new User("Joshimuz");
+
+    Game* g1 = new Game("Minecraft", "The most popular block game!");
+    Game* g2 = new Game("Celeste", "Help Madeline get to the summit of Mount Celeste!");
+
+    g1->createCategory("Any% Glitchless", "Defeat the Ender Dragon on a new world with a random seed.", 's');
+    g2->createCategory("100%", "Complete all of the game's chapters and get all of the collectibles.", 's');
+    g2->createCategory("Fewest Deaths", "Achieve max% completion while dying as few times as possible.", 'c');
+
+    Category* c1g1 = g1->getCatList()[0];
+    Category* c1g2 = g2->getCatList()[0];
+    Category* c2g2 = g2->getCatList()[1];
+
+    c1g1->createRun(*u1, 0, 7, 45, 828, "seed: 7499203634667178692");
+    c1g1->createRun(*u2, 0, 8, 43, 927, "seed: 9153513292182018950");
+    c1g1->createRun(*u3, 0, 8, 58, 930, "seed: 6299140451657411366, got retimed back down");
+    c1g2->createRun(*u4, 1, 41, 35, 316, "yay");
+    c2g2->createCounterRec(*u5, 0, "This is the world's first max%, 202 berries Deathless Celeste run, also known as True 100% Deathless.", "Deaths");
+
+    Event* e1 = new Event("SGDQ2023", "#SGDQ2023 is back in full swing!!", 2023, 5, 28, 2023, 6, 4);
+    e1->createChallenge(*u6, 4, 0, 19, 0, 20, "Surprised that this worked out well.", "Skips", "Fewest Skips");
+
+    bool isRunning = true;
+    string command;
+    while(isRunning){
         cout<<"What do you want to do?\n";
         cin>>command;
-        if(strcmp(command, "quit")==0){
-            isRunning = false;
-            cout<<"Shutting down.";
-        }else if(strcmp(command, "addUser")==0){ //creeaza un user nou
-            char name[20];
-            cout<<"What is the user's name?\n";
-            cin>>name;
-            User* u = new User(name);
-            addUser(u);
-        }else if(strcmp(command, "userList")==0){ //afiseaza lista globala de useri
-            for(int i=0;i<user_nr;i++){
-                user_list[i]->afis();
-            }
-        }else if(strcmp(command, "editUser")==0){
-            int userId = user_nr;
-            while(userId>=user_nr||userId<0){
-                cout<<"What user do you want to change? (global id)\n";
-                cin>>userId;
-                if(userId>=user_nr||userId<0){
-                    cout<<"That user id does not exist.\n";
+        cin.get();
+        try{
+            if(command == "createUser"){
+                cout<<"Please provide an username for this user.\n";
+                char name[20];
+                cin.get(name, 20);
+                cin.get();
+                new User(name);
+            }else if(command == "userList"){
+                User::printUserList();
+            }else if(command == "createGame"){
+                cout<<"Please provide a name for this game.\n";
+                char name[20];
+                cin.get(name, 20);
+                cin.get();
+                cout<<"Please provide a description for this game.\n";
+                char desc[100];
+                cin.get(desc, 100);
+                cin.get();
+                new Game(name, desc);
+            }else if(command == "gameList"){
+                Game::printGameList();
+            }else if(command == "editGame"){
+                if(Game::getGameListSize()==0){
+                    //cout<<"There are no games on the database yet.\n";
+                    range_error r("no range");
+                    throw r;
                 }
-            }
-            cout<<"Current name for this user is "<<user_list[userId]->getUsername()<<'\n';
-            cout<<"What name do you want to give to this user?\n";
-            char name[20];
-            cin>>name;
-            user_list[userId]->setUsername(name);
-        }else if(strcmp(command, "addRun")==0){ //creeaza un run nou
-            int h, m, s, ms, userId = user_nr;
-            char description[100];
-            cout<<"Please type out the time of the run: hours, minutes, seconds, milliseconds.\n";
-            cin>>h>>m>>s>>ms;
-            RunTime* rt = new RunTime(h, m, s, ms);
-            while(userId>=user_nr||userId<0){
-                cout<<"Which user submitted the run? (global id)\n";
-                cin>>userId;
-                if(userId>=user_nr||userId<0){
-                    cout<<"That user id does not exist.\n";
+                editGame();
+            }else if(command == "viewGame"){
+                if(Game::getGameListSize()==0){
+                    //cout<<"There are no games on the database yet.\n";
+                    range_error r("no range");
+                    throw r;
                 }
-            }
-            cout<<"Type the description of this run.\n";
-            cin.get();
-            cin.getline(description, 100);
-            Run* r = new Run(*user_list[userId], *rt, description);
-            addRun(r);
-        }else if(strcmp(command, "runList")==0){ //afiseaza lista globala de run-uri
-            for(int i=0;i<run_nr;i++){
-                run_list[i]->afis();
-                cout<<"Run global id "<<i<<'\n';
-            }
-        }else if(strcmp(command, "runShow")==0){ //afiseaza informatii despre un run anume
-            int runId = run_nr;
-            while(runId>=run_nr||runId<0){
-                cout<<"Which run do you want to see? (global id)\n";
-                cin>>runId;
-                if(runId>=run_nr||runId<0){
-                    cout<<"That run id does not exist.\n";
+                cout<<"Which game do you want to see (game id)?\n";
+                int i;
+                cin>>i;
+                cin.get();
+                Game* g = Game::getGame(i);
+                g->afis();
+            }else if(command == "createEvent"){
+                cout<<"Please provide a name for this event.\n";
+                char name[20];
+                cin.get(name, 20);
+                cin.get();
+                cout<<"Please provide a description for this event.\n";
+                char desc[100];
+                cin.get(desc, 100);
+                cin.get();
+                cout<<"Please provide a start date for this event.\n";
+                int sy, sm, sd;
+                cin>>sy>>sm>>sd;
+                cin.get();
+                cout<<"Please provide an end date for this event.\n";
+                int ey, em, ed;
+                cin>>ey>>em>>ed;
+                cin.get();
+                new Event(name, desc, sy, sm, sd, ey, em, ed);
+            }else if(command == "eventList"){
+                Event::printEventList();
+            }else if(command == "editEvent"){
+                if(Event::getEventListSize()==0){
+                    //cout<<"There are no events on the database yet.\n";
+                    range_error r("no range");
+                    throw r;
                 }
-            }
-            run_list[runId]->afis();
-        }else if(strcmp(command, "editRun")==0){
-            int runId = run_nr;
-            while(runId>=run_nr||runId<0){
-                cout<<"What run do you want to change? (global id)\n";
-                cin>>runId;
-                if(runId>=run_nr||runId<0){
-                    cout<<"That run id does not exist.\n";
+                editEvent();
+            }else if(command == "viewEvent"){
+                if(Game::getGameListSize()==0){
+                    //cout<<"There are no events on the database yet.\n";
+                    range_error r("no range");
+                    throw r;
                 }
+                cout<<"Which event do you want to see (event id)?\n";
+                int i;
+                cin>>i;
+                cin.get();
+                Event* e = Event::getEvent(i);
+                e->afis();
+            }else if(command == "quit"){
+                cout<<"Shutting down.";
+                isRunning = false;
+                continue;
+            }else{
+                InvalidCommand i;
+                throw i;
             }
-            char desc[100];
-            cout<<"What description do you want to give to your run?\n";
-            cout<<"Current description: "<<run_list[runId]->getDescription()<<'\n';
-            cin.get();
-            cin.getline(desc, 100);
-            run_list[runId]->setDescription(desc);
-        }else if(strcmp(command, "addCategory")==0){ //creeaza o categorie noua
-            char name[20], description[20];
-            cout<<"What is the name of this category?\n";
-            cin.get();
-            cin.getline(name, 20);
-            cout<<"Type the description of this category.\n";
-            cin.getline(description, 100);
-            Category* cat = new Category(name, description);
-            addCategory(cat);
-        }else if(strcmp(command, "catList")==0){ //afiseaza lista globala de categorii
-            for(int i=0;i<cat_nr;i++){
-                cat_list[i]->afis();
-                cout<<"Category global id "<<i<<'\n';
-            }
-        }else if(strcmp(command, "addRunToCat")==0){ //adauga un run la o categorie
-            int runId=run_nr, catId=cat_nr;
-            while(catId>=cat_nr||catId<0){
-                cout<<"What category do you want to add the run to? (global id)\n";
-                cin>>catId;
-                if(catId>=cat_nr||catId<0){
-                    cout<<"That category id does not exist.\n";
-                }
-            }
-            while(runId>=run_nr||runId<0){
-                cout<<"What run do you want to add to the category? (global id)\n";
-                cin>>runId;
-                if(runId>=run_nr||runId<0){
-                    cout<<"That run id does not exist.\n";
-                }
-            }
-            cat_list[catId]->addRun(run_list[runId]);
-        }else if(strcmp(command, "removeRunFromCat")==0){ //elimina un run dintr-o categorie
-            int catId = cat_nr;
-            while(catId>=cat_nr||catId<0){
-                cout<<"What category do you want to remove the run from? (global id)\n";
-                cin>>catId;
-                if(catId>=cat_nr||catId<0){
-                    cout<<"That category id does not exist.\n";
-                }
-            }
-            int runId = cat_list[catId]->getRunNr();
-            while(runId>=run_nr||runId<0){
-                cout<<"What run do you want to remove from the category? (LOCAL/category-based id)\n";
-                cin>>runId;
-                if(runId>=run_nr||runId<0){
-                    cout<<"That run id does not exist.\n";
-                }
-            }
-            cat_list[catId]->removeRun(runId);
-        }else if(strcmp(command, "showTotalTimeCat")==0){
-            int catId = cat_nr;
-            while(catId>=cat_nr||catId<0){
-                cout<<"What category do you want to get the total run time from? (global id)\n";
-                cin>>catId;
-                if(catId>=cat_nr||catId<0){
-                    cout<<"That category id does not exist.\n";
-                }
-            }
-            cout<<cat_list[catId]->getTotalTime();
-        }else if(strcmp(command, "leaderboard")==0){
-            int catId = cat_nr;
-            while(catId>=cat_nr||catId<0){
-                cout<<"Which category's leaderboards do you want to see? (global id)\n";
-                cin>>catId;
-                if(catId>=cat_nr||catId<0){
-                    cout<<"That category id does not exist.\n";
-                }
-            }
-            cat_list[catId]->afisSorted();
-        }else if(strcmp(command, "catRunList")==0){
-            int catId = cat_nr;
-            while(catId>=cat_nr||catId<0){
-                cout<<"Which category's leaderboards do you want to see? (global id)\n";
-                cin>>catId;
-                if(catId>=cat_nr||catId<0){
-                    cout<<"That category id does not exist.\n";
-                }
-            }
-            cat_list[catId]->afis();
-        }else if(strcmp(command, "addGame")==0){ //creeaza un joc nou
-            char name[20], description[20];
-            cout<<"What is the name of this game?\n";
-            cin.get();
-            cin.getline(name, 20);
-            cout<<"Type the description of this game.\n";
-            cin.getline(description, 100);
-            Game* g = new Game(name, description);
-            addGame(g);
-        }else if(strcmp(command, "gameList")==0){ //afiseaza lista de jocuri
-            for(int i=0;i<game_nr;i++){
-                game_list[i]->afis();
-                cout<<"Game global id "<<i<<'\n';
-            }
-        }else if(strcmp(command, "addCatToGame")==0){ //adauga o categorie la un joc
-            int gameId=game_nr, catId=cat_nr;
-            while(gameId>=game_nr||gameId<0){
-                cout<<"What game do you want to add the category to? (global id)\n";
-                cin>>gameId;
-                if(gameId>=game_nr||gameId<0){
-                    cout<<"That game id does not exist.\n";
-                }
-            }
-            while(catId>=cat_nr||catId<0){
-                cout<<"What category do you want to add to the game? (global id)\n";
-                cin>>catId;
-                if(catId>=cat_nr||catId<0){
-                    cout<<"That category id does not exist.\n";
-                }
-            }
-            game_list[gameId]->addCategory(cat_list[catId]);
-        }else{ //daca comanda data nu corespunde cu nici o comanda de mai sus
-            cout<<"Invalid command.";
+        }catch(range_error){
+            cout<<"No objects of this type on the database yet.\n";
+            InvalidCommand i;
+            throw i;
+        }catch(InvalidCommand){
+            cout<<"This command is invalid.\n";
         }
+        cout<<"\n";
     }
-    //stergem listele globale dupa ce se termina executia loop-ului de "meniu"
-    for(int i=0;i<game_nr;i++){
-        delete game_list[i];
-    }
-    delete[] game_list;
-    for(int i=0;i<cat_nr;i++){
-        delete cat_list[i];
-    }
-    delete[] cat_list;
-    for(int i=0;i<run_nr;i++){
-        delete run_list[i];
-    }
-    delete[] run_list;
-    for(int i=0;i<user_nr;i++){
-        delete user_list[i];
-    }
-    delete[] user_list;
     return 0;
 }
